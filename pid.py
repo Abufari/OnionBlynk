@@ -1,11 +1,10 @@
 import time
-from collections import namedtuple
 
 
 class PID:
-    def __init__(self, setpoint: float, input_value: float, kp: float,
-                 ki: float,
-                 kd: float, forward: bool = True) -> None:
+    def __init__(self, setpoint: float = 90,
+                 input_value: float = 20, kp: float = 1,
+                 ki: float = 1, kd: float = 0, forward: bool = True) -> None:
         self.desired_value = setpoint
         self.actual_value = input_value
         self.kp = kp
@@ -30,8 +29,6 @@ class PID:
         self.output_max = 100
         self.sample_time = 100  # ms between measurements
         self.agressive_gap = 15  # °C
-        state = namedtuple('state', 'heat_up maintain')
-        self.state = state(heat_up=1, maintain=2)
 
         self.setTunings(self.kp, self.ki, self.kd)
 
@@ -114,15 +111,16 @@ class PID:
         self.integral_term = self.ki * self.integral_value
 
     def _calculate_derivative(self):
-        self.derivative_value = (
-                                        self.error - self.last_error) / self.elapsed_time
+        self.derivative_value = (self.error - self.last_error
+                                 ) / self.elapsed_time
         self.derivative_term = self.kd * self.derivative_value
 
     def _calculate_new_output(self):
-        output = self.proportional_term + \
-                 self.integral_term + \
-                 self.derivative_term + \
-                 self.bias
+        output = (self.proportional_term +
+                  self.integral_term +
+                  self.derivative_term +
+                  self.bias
+                  )
 
         # check boundaries
         output = min(output, self.output_max)
