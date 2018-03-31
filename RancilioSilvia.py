@@ -2,6 +2,7 @@ import time
 
 from Configurator import Configurator
 from PinHandler import PinHandler
+from TemperatureSensor import TemperatureSensor
 from pid import PID
 
 
@@ -16,14 +17,7 @@ class Heater(object):
         self.pinHandler = PinHandler(configs)
 
     def heaterHandler(self):
-        onDuration = self.output / 100 * self.cycleMilliseconds
-        now = time.time()
-        if now - self.cycleStartTime < onDuration:
-            self.pinHandler.setHeater(1)
-        elif now - self.cycleStartTime < self.cycleMilliseconds:
-            self.pinHandler.setHeater(0)
-        else:
-            self.cycleStartTime = time.time()
+        self.pinHandler.setHeater(self.output)
 
     def update(self, output):
         self.output = min(output, 100)
@@ -39,6 +33,11 @@ class RancilioSilvia:
         self.update_pid_configs()
         self.isPoweredOn = False
         self.powerMode = self.configs.energy_mode.eco
+
+        # Temperature sensors
+        self.boilerTempSensor = TemperatureSensor(sensorAddress=None,
+                                                  configs=self.configs)
+        self.boilerTempSensor.setupSensor()
 
     def update(self):
         if self.isPoweredOn:
@@ -60,5 +59,7 @@ class RancilioSilvia:
         self.pid.desired_value = self.configs.pid_configs[
             self.powerMode]['setpoint']
 
-    def read_temperature_sensors(self):
-        pass
+    def read_temperature_sensors(self, whichSensor: str):
+        if whichSensor == 'boiler':
+            return self.boilerTempSensor.readTemperature()
+        return None

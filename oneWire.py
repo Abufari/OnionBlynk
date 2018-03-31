@@ -3,6 +3,8 @@ import os
 import subprocess
 import time
 
+from typing import Union, List
+
 # specify delay duration to be used in the program
 setupDelay = 3
 
@@ -69,7 +71,7 @@ def checkRegistered(address):
 
 
 # scan addresses of all connected 1-w devices
-def scanAddresses():
+def scanAddresses() -> Union[bool, List[str]]:
     if not checkFilesystem():
         return False
 
@@ -85,6 +87,12 @@ def scanOneAddress():
     """
     logger = logging.getLogger(__name__)
     addresses = scanAddresses()
+    if not addresses:
+        return False
+    try:
+        assert (type(addresses) == list)
+    except AssertionError:
+        return False
     logger.debug('scanOneAddress: {}'.format(addresses[0]))
     return addresses[0]
 

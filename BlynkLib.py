@@ -22,8 +22,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
-
-
+import logging
 import socket
 import struct
 import sys
@@ -76,7 +75,7 @@ HEARTBEAT_PERIOD = const(10)
 NON_BLK_SOCK = const(0)
 MIN_SOCK_TO = const(1)  # 1 second
 MAX_SOCK_TIMEOUT = const(5)  # 5 seconds, must be < HEARTBEAT_PERIOD
-RECONNECT_DELAY = const(1)  # 1 second
+RECONNECT_DELAY = const(3)  # seconds
 TASK_PERIOD_RES = const(50)  # 50 ms
 IDLE_TIME_MS = const(5)  # 5 ms
 
@@ -156,7 +155,17 @@ class Blynk:
         self._ssl = ssl
         self.state = DISCONNECTED
 
+        # run relevant variabables
+        self._start_time = time.ticks_ms()
+        self._task_millis = self._start_time
+        self._hw_pins = {}
+        self._rx_data = b''
+        self._msg_id = 1
+        self._timeout = None
+        self._m_time = 0
+
         self.hdr = struct.Struct(HDR_FMT)
+        self.logger = logging.getLogger(__name__)
 
     def _format_msg(self, msg_type, *args):
         """convert params to string and join using \0"""
@@ -239,6 +248,7 @@ class Blynk:
         time.sleep(RECONNECT_DELAY)
         if emsg:
             print('Error: %s, connection closed' % emsg)
+            self.logger.error('{}, connection closed'.format(emsg))
 
     def _server_alive(self):
         c_time = int(time.time())
@@ -280,6 +290,11 @@ class Blynk:
     def email(self, to, subject, body):
         if self.state == AUTHENTICATED:
             self._send(self._format_msg(MSG_Email, to, subject, body))
+
+    def setProperty(self, pin, pin_property, args):
+        if self.state == AUTHENTICATED:
+            self._send(self._format_msg(MSG_Set_Widget_Property, pin,
+                                        pin_property, args))
 
     def virtual_write(self, pin, val):
         if self.state == AUTHENTICATED:
@@ -338,6 +353,7 @@ class Blynk:
 
     def disconnect(self):
         self._do_connect = False
+        self.logger.debug('setting _do_connect = False in disconnect()')
 
     def _connect_via_ssl_or_tcp(self):
         self.state = CONNECTING
