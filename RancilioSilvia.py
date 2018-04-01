@@ -1,3 +1,4 @@
+import logging
 import time
 
 from Configurator import Configurator
@@ -35,6 +36,7 @@ class RancilioSilvia:
         self.update_pid_configs()
         self.isPoweredOn = False
         self.powerMode = self.configs.energy_mode.eco
+        self.logger = logging.getLogger(__name__)
 
         # Temperature sensors
         self.boilerTempSensor = TemperatureSensor(sensorAddress=None,
@@ -42,6 +44,7 @@ class RancilioSilvia:
         self.boilerTempSensor.setupSensor()
 
     def update(self):
+        self.logger.debug('running update function')
         if self.isPoweredOn:
             output = self.pid.compute(self.input_value)
             self.configs.heater_output = output
@@ -51,6 +54,7 @@ class RancilioSilvia:
 
     def setHeaterOutput(self, output: float):
         self.heater.output = output
+        self.logger.debug('Setting output to {}'.format(output))
         self.heater.heaterHandler()
 
     def update_pid_configs(self):
@@ -70,5 +74,6 @@ class RancilioSilvia:
         return None
 
     def update_configs(self):
+        self.logger.debug('updating configs')
         self.isPoweredOn = self.configs.RancilioPoweredOn
         self.powerMode = self.configs.RancilioPowerMode

@@ -1,3 +1,4 @@
+import logging
 import os
 
 from Configurator import Configurator
@@ -12,7 +13,10 @@ class PinHandler(object):
             self.heatingElement
         ))
 
+        self.logger = logging.getLogger(__name__)
+
     def setHeater(self, value):
+        self.logger.debug('setting pwm to {} duty_cycle'.format(value))
         os.system('fast-gpio pwm {gpio} {freq} {duty_cycle}'.format(
             gpio=self.heatingElement, freq=1, duty_cycle=value
         ))
