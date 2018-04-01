@@ -28,6 +28,8 @@ class RancilioSilvia:
     def __init__(self, configs: Configurator):
         self.input_value = 0
         self.configs = configs
+        self.configs.functionList.append(self.update_configs)
+        self.configs.functionList.append(self.update_pid_configs)
         self.heater = Heater(configs)
         self.pid = PID()
         self.update_pid_configs()
@@ -41,12 +43,15 @@ class RancilioSilvia:
 
     def update(self):
         if self.isPoweredOn:
-            self.pid.compute(self.input_value)
+            output = self.pid.compute(self.input_value)
+            self.configs.heater_output = output
+            self.setHeaterOutput(output)
         else:
             self.setHeaterOutput(0)
 
     def setHeaterOutput(self, output: float):
         self.heater.output = output
+        self.heater.heaterHandler()
 
     def update_pid_configs(self):
         # Power settings
@@ -63,3 +68,7 @@ class RancilioSilvia:
         if whichSensor == 'boiler':
             return self.boilerTempSensor.readTemperature()
         return None
+
+    def update_configs(self):
+        self.isPoweredOn = self.configs.RancilioPoweredOn
+        self.powerMode = self.configs.RancilioPowerMode

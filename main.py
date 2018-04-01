@@ -4,7 +4,6 @@ import time
 import BlynkLib
 from Configurator import Configurator
 from RancilioSilvia import RancilioSilvia
-from pid import PID
 
 BLYNK_AUTH = 'ed56b3aa45b2416f9982452da05becad'
 
@@ -25,6 +24,7 @@ logger = logging.getLogger(__name__)
 def rancilio_main_switch_handler(value):
     powerOn = int(value)
     configs.RancilioPoweredOn = bool(powerOn)
+    configs.update()
     status = 'on' if bool(powerOn) else 'off'
     logger.info('Rancilio is powered {}'.format(status))
 
@@ -89,7 +89,6 @@ def loop():
 
 configs = Configurator()
 Rancilio = RancilioSilvia(configs)
-pid = PID()
 
 lastTempStatus = time.time()
 lastHeaterStatus = time.time()
