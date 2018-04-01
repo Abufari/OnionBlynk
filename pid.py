@@ -48,7 +48,7 @@ class PID:
             self.ki *= -1
             self.kd *= -1
 
-    def compute(self, input_value):
+    def __old_compute(self, input_value):
         if self.last_time is not None:
             if time.time() - self.last_time < self.sample_time:
                 # do nothing
@@ -79,7 +79,7 @@ class PID:
 
         return output
 
-    def my_compute(self, actual_value):
+    def compute(self, actual_value):
         self.actual_value = actual_value
 
         if self.last_time is not None:

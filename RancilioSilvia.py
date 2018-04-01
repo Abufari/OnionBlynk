@@ -36,16 +36,16 @@ class RancilioSilvia:
         self.update_pid_configs()
         self.isPoweredOn = False
         self.powerMode = self.configs.energy_mode.eco
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger('__main__.' + __name__)
 
         # Temperature sensors
-        self.boilerTempSensor = TemperatureSensor(sensorAddress=None,
-                                                  configs=self.configs)
+        self.boilerTempSensor = TemperatureSensor(
+            sensorAddress='28-0000092c44f8',
+            configs=self.configs)
         self.boilerTempSensor.setupSensor()
 
     def update(self):
         self.logger.debug('running update function')
-        self.logger.info('running update function')
         if self.isPoweredOn:
             output = self.pid.compute(self.input_value)
             self.configs.heater_output = output

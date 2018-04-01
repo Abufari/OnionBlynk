@@ -9,7 +9,7 @@ class SensorInitiator:
         self.supportedInterfaces = ['oneWire']
         self.interface = interface
         self.ready = False
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger('__main__.' + __name__)
 
         if self.interface not in self.supportedInterfaces:
             self.logger.warning('Unsupported interface.')

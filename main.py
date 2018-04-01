@@ -78,15 +78,13 @@ def loop():
     if now - lastTempStatus > 5:
         rancilio_temperature_status_handler()
         lastTempStatus = now
+        Rancilio.update()
     if now - lastHeaterStatus > 1:
         rancilio_heater_status_handler()
         lastHeaterStatus = now
     if now - lastRacilioReadStatus > 5:
         rancilio_ready_handler()
         lastRacilioReadStatus = now
-    if time.time() - lastTempStatus > 5:
-        rancilio_temperature_status_handler()
-        lastTempStatus = time.time()
 
 
 configs = Configurator()
@@ -96,5 +94,6 @@ lastTempStatus = time.time()
 lastHeaterStatus = time.time()
 lastRacilioReadStatus = time.time()
 blynk.set_user_task(loop, 50)
+blynk.on_connect(blynk.sync_all)
 
 blynk.run()

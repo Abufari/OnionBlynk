@@ -13,7 +13,7 @@ class PinHandler(object):
             self.heatingElement
         ))
 
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger('__main__.' + __name__)
 
     def setHeater(self, value):
         self.logger.debug('setting pwm to {} duty_cycle'.format(value))
