@@ -46,8 +46,10 @@ def debug_handler(value):
     value = int(value)
     if value == 0:
         logger.setLevel(logging.INFO)
+        logger.info('Setting logger to INFO')
     elif value == 1:
         logger.setLevel(logging.DEBUG)
+        logger.debug('Setting logger to DEBUG')
 
 
 def rancilio_temperature_status_handler():

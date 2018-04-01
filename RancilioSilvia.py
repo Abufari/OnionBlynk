@@ -45,6 +45,7 @@ class RancilioSilvia:
 
     def update(self):
         self.logger.debug('running update function')
+        self.logger.info('running update function')
         if self.isPoweredOn:
             output = self.pid.compute(self.input_value)
             self.configs.heater_output = output
