@@ -35,7 +35,6 @@ class SensorInitiator:
 
     def __readOneWire(self):
         rawValue = self.driver.readDevice()
-        self.logger.debug('rawValue: {}'.format(rawValue))
 
         value = rawValue[1].split()[-1].split('=')[1]
         value = int(value)

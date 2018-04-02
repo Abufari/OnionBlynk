@@ -45,7 +45,6 @@ class RancilioSilvia:
         self.boilerTempSensor.setupSensor()
 
     def update(self):
-        self.logger.debug('running update function')
         if self.isPoweredOn:
             output = self.pid.compute(self.input_value)
             self.configs.heater_output = output
@@ -55,7 +54,6 @@ class RancilioSilvia:
 
     def setHeaterOutput(self, output: float):
         self.heater.output = output
-        self.logger.debug('Setting output to {}'.format(output))
         self.heater.heaterHandler()
 
     def update_pid_configs(self):

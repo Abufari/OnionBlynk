@@ -35,9 +35,14 @@ class Configurator:
                 'kp': 0,
                 'ki': 0,
                 'kd': 0,
-                'setpoint': 120,
+                'setpoint': 115,
             }
         }
+
+        # data acquisition
+        self.smoothingFactor = 8
+
+        self.boilerTempSensor1 = '28-0000092c44f8'
 
     def update(self):
         for f in self.functionList:
