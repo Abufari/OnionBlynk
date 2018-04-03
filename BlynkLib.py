@@ -75,7 +75,7 @@ HEARTBEAT_PERIOD = const(10)
 NON_BLK_SOCK = const(0)
 MIN_SOCK_TO = const(1)  # 1 second
 MAX_SOCK_TIMEOUT = const(5)  # 5 seconds, must be < HEARTBEAT_PERIOD
-RECONNECT_DELAY = const(3)  # seconds
+RECONNECT_DELAY = const(1)  # seconds
 TASK_PERIOD_RES = const(50)  # 50 ms
 IDLE_TIME_MS = const(5)  # 5 ms
 
@@ -256,6 +256,10 @@ class Blynk:
             self._m_time = c_time
             self._tx_count = 0
             if self._last_hb_id != 0 and c_time - self._hb_time >= MAX_SOCK_TIMEOUT:
+                self.logger.error('c_time - hb_time > max_sock_timeout:\n'
+                                  '{} - {} > {}'.format(c_time,
+                                                        self._hb_time,
+                                                        MAX_SOCK_TIMEOUT))
                 return False
             if (
                 c_time - self._hb_time >= HEARTBEAT_PERIOD and
@@ -387,7 +391,8 @@ class Blynk:
                 self.state = AUTHENTICATING
                 hdr = self.hdr.pack(MSG_Login, self._new_msg_id(),
                                     len(self._token))
-                print('Blynk connection successful, authenticating...')
+                self.logger.info('Blynk connection successful, '
+                                 'authenticating...')
                 self._send(hdr + self._token, True)
                 data = self._receive(HDR_LEN, timeout=MAX_SOCK_TIMEOUT)
                 if not data:
@@ -404,7 +409,8 @@ class Blynk:
                     self._format_msg(MSG_Blynk_Internal, 'ver', '0.0.1+py',
                                      'h-beat', HEARTBEAT_PERIOD, 'dev',
                                      sys.platform))
-                print('Access granted, happy Blynking!')
+                self.logger.info('Access granted, happy Blynking!')
+                self._hb_time = int(time.time())
                 if self._on_connect:
                     self._on_connect()
             else:
@@ -426,6 +432,12 @@ class Blynk:
                 if msg_type == MSG_Response:
                     if msg_id == self._last_hb_id:
                         self._last_hb_id = 0
+                    else:
+                        self.logger.debug('last_hb_id ({}) != msg_id ({}), '
+                                          'but msg_type == '
+                                          'MSG_Response'.format(
+                            self._last_hb_id, msg_id
+                        ))
                 elif msg_type == MSG_Ping:
                     # Send Pong
                     self._send(

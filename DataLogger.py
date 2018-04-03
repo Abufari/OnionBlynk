@@ -47,8 +47,6 @@ class DataLogger:
             # smoothing values by applying Infinite Impulse Response Filter
             self.boilerTemp.value += (raw_value - self.boilerTemp.value
                                       ) / self._smoothingFactor
-            self.logger.info('resulting boilerTemp of {}'.format(
-                self.boilerTemp.value))
 
             raw_value = self._acquire_temperature_of_sensor_list(
                 self._steamTempSensors)
@@ -62,8 +60,6 @@ class DataLogger:
         for i in range(number_of_tempSensors):
             tempSensor: TemperatureSensor = sensor_type[i]
             temperature = tempSensor.readTemperature()
-            self.logger.info(
-                'Reading temperature value {}'.format(temperature))
             if temperature is not None:
                 raw_value += temperature / number_of_tempSensors
             else:
