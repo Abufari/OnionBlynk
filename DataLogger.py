@@ -1,6 +1,6 @@
 import logging
 import time
-from multiprocessing import Event, Value
+from threading import Event
 from typing import List
 
 from Configurator import Configurator
@@ -12,8 +12,8 @@ class DataLogger:
     _boilerTempSensors: List[TemperatureSensor]
     _steamTempSensors: List[TemperatureSensor]
 
-    def __init__(self, configs: Configurator, boilerTemp: Value,
-                 steamTemp: Value, stopEvent: Event,
+    def __init__(self, configs: Configurator, boilerTemp: float,
+                 steamTemp: float, stopEvent: Event,
                  error_in_method_event: Event):
         self.boilerTemp = boilerTemp
         self.steamTemp = steamTemp
@@ -45,13 +45,13 @@ class DataLogger:
             raw_value = self._acquire_temperature_of_sensor_list(
                 self._boilerTempSensors)
             # smoothing values by applying Infinite Impulse Response Filter
-            self.boilerTemp.value += (raw_value - self.boilerTemp.value
-                                      ) / self._smoothingFactor
+            self.boilerTemp += (raw_value - self.boilerTemp
+                                ) / self._smoothingFactor
 
             raw_value = self._acquire_temperature_of_sensor_list(
                 self._steamTempSensors)
-            self.steamTemp.value += (raw_value - self.steamTemp.value
-                                     ) / self._smoothingFactor
+            self.steamTemp += (raw_value - self.steamTemp
+                               ) / self._smoothingFactor
             time.sleep(0.1)
 
     def _acquire_temperature_of_sensor_list(self, sensor_type: list):

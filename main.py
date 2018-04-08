@@ -1,6 +1,6 @@
 import logging
 import time
-from multiprocessing import Process, Event, Value
+from threading import Thread, Event
 
 import BlynkLib
 from Configurator import Configurator
@@ -55,7 +55,7 @@ def debug_handler(value):
 
 
 def rancilio_temperature_status_handler():
-    temperature = boilerTemp.value
+    temperature = boilerTemp
     logger.info('received boilerTemp of {}'.format(temperature))
     if temperature is not None:
         blynk.virtual_write(3, temperature)
@@ -99,15 +99,15 @@ lastRacilioReadStatus = time.time()
 blynk.set_user_task(loop, 50)
 blynk.on_connect(blynk.sync_all)
 
-# Multiprocessing stuff
+# Threading stuff
 stopEvent = Event()
 error_in_method_event = Event()
-boilerTemp = Value('d', 21)
-steamTemp = Value('d', 0)
+boilerTemp = 21
+steamTemp = 0
 dataLogger = DataLogger(configs, boilerTemp, steamTemp,
                         stopEvent, error_in_method_event)
 dataLogger.newTemperatureSensor('boiler', configs.boilerTempSensor1)
-temperatureAcquisitionProcess = Process(target=dataLogger.acquireData)
+temperatureAcquisitionProcess = Thread(target=dataLogger.acquireData)
 temperatureAcquisitionProcess.start()
 
 blynk.run()

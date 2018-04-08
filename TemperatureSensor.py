@@ -69,14 +69,14 @@ class TemperatureSensor:
             return False
         self.sensor = SensorInitiator('oneWire', {
             'address': self.sensorAddress,
-            'gpio': self.configs.heaterElementPin
+            'gpio': self.configs.tempSensorPin
         })
 
         if not self.sensor.ready:
             self.logger.warning('Sensor was not set up correctly. Please make '
                                 'sure that your sensor is firmly connected '
                                 'to the GPIO {} and try again.'.format(
-                self.configs.heaterElementPin
+                self.configs.tempSensorPin
             )
             )
         return True
