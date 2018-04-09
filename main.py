@@ -18,7 +18,7 @@ logging.basicConfig(level=logging.INFO,
                         logging.FileHandler(
                             '/root/RancilioSilviaBlynk/onionBlynk.log'),
                         logging.StreamHandler()
-                    ])
+                        ])
 logger = logging.getLogger(__name__)
 
 
@@ -55,8 +55,7 @@ def debug_handler(value):
 
 
 def rancilio_temperature_status_handler():
-    temperature = boilerTemp
-    logger.info('received boilerTemp of {}'.format(temperature))
+    temperature = dataLogger.boilerTemp
     if temperature is not None:
         blynk.virtual_write(3, temperature)
 
@@ -64,7 +63,7 @@ def rancilio_temperature_status_handler():
 def rancilio_heater_status_handler():
     dutyCycle = configs.heater_output
     # map down to 0-255
-    led = dutyCycle / 100 * 255
+    led = int(dutyCycle / 100 * 255)
     blynk.virtual_write(5, led)
 
 
@@ -73,41 +72,37 @@ def rancilio_ready_handler():
     blynk.virtual_write(4, ready)
 
 
-def loop():
-    global lastTempStatus
-    global lastHeaterStatus
-    global lastRacilioReadStatus
-    now = time.time()
-    if now - lastTempStatus > 5:
-        rancilio_temperature_status_handler()
-        lastTempStatus = now
-        Rancilio.update()
-    if now - lastHeaterStatus > 1:
-        rancilio_heater_status_handler()
-        lastHeaterStatus = now
-    if now - lastRacilioReadStatus > 5:
-        rancilio_ready_handler()
-        lastRacilioReadStatus = now
+class loop():
+    def __init__(self, _stopEvent: Event):
+        self.stopEvent = _stopEvent
+
+    def run(self):
+        while not self.stopEvent.is_set():
+            rancilio_temperature_status_handler()
+            Rancilio.update()
+            rancilio_heater_status_handler()
+            rancilio_ready_handler()
+            time.sleep(1)
 
 
 configs = Configurator()
-Rancilio = RancilioSilvia(configs)
-
-lastTempStatus = time.time()
-lastHeaterStatus = time.time()
-lastRacilioReadStatus = time.time()
-blynk.set_user_task(loop, 50)
-blynk.on_connect(blynk.sync_all)
 
 # Threading stuff
 stopEvent = Event()
 error_in_method_event = Event()
-boilerTemp = 21
-steamTemp = 0
-dataLogger = DataLogger(configs, boilerTemp, steamTemp,
-                        stopEvent, error_in_method_event)
+dataLogger = DataLogger(configs, stopEvent, error_in_method_event)
 dataLogger.newTemperatureSensor('boiler', configs.boilerTempSensor1)
 temperatureAcquisitionProcess = Thread(target=dataLogger.acquireData)
 temperatureAcquisitionProcess.start()
 
-blynk.run()
+Rancilio = RancilioSilvia(configs, dataLogger)
+
+myloop = loop(stopEvent)
+myloop_thread = Thread(target=myloop.run, daemon=True)
+myloop_thread.start()
+blynk.on_connect(blynk.sync_all)
+
+try:
+    blynk.run()
+except KeyboardInterrupt:
+    stopEvent.set()

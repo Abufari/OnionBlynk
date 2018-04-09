@@ -51,7 +51,7 @@ class TemperatureSensor:
         self.logger = logging.getLogger(__name__)
         self.configs = configs
         self.oneWireStatus = oneWire.setupOneWire(
-            self.configs.heaterElementPin)
+            self.configs.tempSensorPin)
 
         self.sensorAddress = sensorAddress
         self.sensor = None

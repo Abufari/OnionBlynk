@@ -19,30 +19,31 @@ class Configurator:
         # PID variables
         self.heater_output = 0
         self.pid_configs = {
-            Configurator.energy_mode.on: {
-                'kp': 0,
-                'ki': 0,
-                'kd': 0,
+            Configurator.energy_mode.on:    {
+                'kp':       2,
+                'ki':       0.01,
+                'kd':       0,
                 'setpoint': 98,
-            },
-            Configurator.energy_mode.eco: {
-                'kp': 0,
-                'ki': 0,
-                'kd': 0,
+                },
+            Configurator.energy_mode.eco:   {
+                'kp':       0,
+                'ki':       0,
+                'kd':       0,
                 'setpoint': 50,
-            },
+                },
             Configurator.energy_mode.steam: {
-                'kp': 0,
-                'ki': 0,
-                'kd': 0,
+                'kp':       0,
+                'ki':       0,
+                'kd':       0,
                 'setpoint': 115,
+                }
             }
-        }
 
         # data acquisition
         self.smoothingFactor = 8
 
         self.boilerTempSensor1 = '28-0000092c44f8'
+        self.boilerTempSensor2 = '28-0000092d7d9f'
 
     def update(self):
         for f in self.functionList:

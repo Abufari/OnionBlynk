@@ -131,6 +131,7 @@ class Terminal:
 
 
 class Blynk:
+
     def __init__(self, token, server='blynk-cloud.com', port=None,
                  connect=True, ssl=False):
         self._tx_count = 0
@@ -162,10 +163,113 @@ class Blynk:
         self._rx_data = b''
         self._msg_id = 1
         self._timeout = None
-        self._m_time = 0
+        self._last_server_alive_checked = 0
 
         self.hdr = struct.Struct(HDR_FMT)
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger('__main__.' + __name__)
+
+    def run(self):
+        self._start_time = time.ticks_ms()
+        self._task_millis = self._start_time
+        self._hw_pins = {}
+        self._rx_data = b''
+        self._msg_id = 1
+        self._timeout = None
+        self._tx_count = 0
+        self._last_server_alive_checked = 0
+        self.state = DISCONNECTED
+
+        while True:
+            self._block_until_connected_to_blynk()
+
+            self._communicate_with_blynk_and_run_task()
+
+            if not self._do_connect:
+                self._close()
+                print('Blynk disconnection requested by the user')
+
+    def _block_until_connected_to_blynk(self):
+        while self.state != AUTHENTICATED:
+            self._run_task()
+            if self._do_connect:
+                try:
+                    self._connect_via_ssl_or_tcp()
+                except:
+                    self._close('connection with the Blynk servers failed')
+                    continue
+
+                self.state = AUTHENTICATING
+                hdr = self.hdr.pack(MSG_Login, self._new_msg_id(),
+                                    len(self._token))
+                self.logger.info('Blynk connection successful, '
+                                 'authenticating...')
+                self._send(hdr + self._token, True)
+                data = self._receive(HDR_LEN, timeout=MAX_SOCK_TIMEOUT)
+                if not data:
+                    self._close('Blynk authentication timed out')
+                    continue
+
+                msg_type, msg_id, status = self.hdr.unpack(data)
+                if status != Response_OK or msg_id == 0:
+                    self._close('Blynk authentication failed')
+                    continue
+
+                self.state = AUTHENTICATED
+                self._send(
+                    self._format_msg(MSG_Blynk_Internal, 'ver', '0.0.1+py',
+                                     'h-beat', HEARTBEAT_PERIOD, 'dev',
+                                     sys.platform))
+                self.logger.info('Access granted, happy Blynking!')
+                self._hb_time = int(time.time())
+                if self._on_connect:
+                    self._on_connect()
+            else:
+                self._start_time = sleep_from_until(self._start_time,
+                                                    TASK_PERIOD_RES)
+
+    def _communicate_with_blynk_and_run_task(self):
+        while self._do_connect:
+            data = None
+            try:
+                data = self._receive(HDR_LEN, NON_BLK_SOCK)
+            except:
+                pass
+            if data:
+                msg_type, msg_id, msg_len = struct.unpack(HDR_FMT, data)
+                if msg_id == 0:
+                    self._close('invalid msg id %d' % msg_id)
+                    break
+                if msg_type == MSG_Response:
+                    if msg_id == self._last_hb_id:
+                        self.logger.debug('setting last_hb_id to 0')
+                        self._last_hb_id = 0
+                    else:
+                        self.logger.debug(
+                            'last_hb_id ({}) != msg_id ({}), '
+                            'but msg_type == '
+                            'MSG_Response'.format(
+                                self._last_hb_id, msg_id
+                                ))
+                elif msg_type == MSG_Ping:
+                    # Send Pong
+                    self.logger.debug('sending Pong in communicate_with_blynk')
+                    self._send(
+                        self.hdr.pack(MSG_Response, msg_id,
+                                      Response_OK), True)
+                elif msg_type == MSG_Hardware or msg_type == MSG_Bridge:
+                    data = self._receive(msg_len, MIN_SOCK_TO)
+                    if data:
+                        self._handle_hw(data)
+                else:
+                    self._close('unknown message type %d' % msg_type)
+                    break
+            else:
+                self._start_time = sleep_from_until(self._start_time,
+                                                    IDLE_TIME_MS)
+            if not self._server_alive():
+                self._close('Blynk server is offline')
+                break
+            self._run_task()
 
     def _format_msg(self, msg_type, *args):
         """convert params to string and join using \0"""
@@ -245,30 +349,33 @@ class Blynk:
     def _close(self, emsg=None):
         self.conn.close()
         self.state = DISCONNECTED
+        self._last_hb_id = 0
         time.sleep(RECONNECT_DELAY)
         if emsg:
             print('Error: %s, connection closed' % emsg)
             self.logger.error('{}, connection closed'.format(emsg))
 
     def _server_alive(self):
-        c_time = int(time.time())
-        if self._m_time != c_time:
-            self._m_time = c_time
+        now_server_alive_check = int(time.time())
+        if self._last_server_alive_checked != now_server_alive_check:
+            self._last_server_alive_checked = now_server_alive_check
             self._tx_count = 0
-            if self._last_hb_id != 0 and c_time - self._hb_time >= MAX_SOCK_TIMEOUT:
-                self.logger.error('c_time - hb_time > max_sock_timeout:\n'
-                                  '{} - {} > {}'.format(c_time,
-                                                        self._hb_time,
-                                                        MAX_SOCK_TIMEOUT))
+            # last_hb_id is 0 after receiving Pong
+            if self._last_hb_id != 0 and \
+                    now_server_alive_check - self._hb_time >= MAX_SOCK_TIMEOUT:
+                self.logger.error(
+                    'now_server_alive_check - hb_time > max_sock_timeout:\n'
+                    '{} - {} > {}'.format(now_server_alive_check,
+                                          self._hb_time,
+                                          MAX_SOCK_TIMEOUT))
                 return False
-            if (
-                c_time - self._hb_time >= HEARTBEAT_PERIOD and
-                self.state == AUTHENTICATED
-            ):
-                self._hb_time = c_time
+            if (now_server_alive_check - self._hb_time >= HEARTBEAT_PERIOD and
+                    self.state == AUTHENTICATED):
+                self._hb_time = now_server_alive_check
                 self._last_hb_id = self._new_msg_id()
                 self._send(self.hdr.pack(MSG_Ping, self._last_hb_id, 0),
-                           True)
+                           send_anyway=True)
+                self.logger.debug('Sending ping in _server_alive')
         return True
 
     def _run_task(self):
@@ -317,7 +424,7 @@ class Blynk:
             self._vr_pins[pin] = VrPin(read, write)
         else:
             raise ValueError('the pin must be an integer between 0 and %d' % (
-                MAX_VIRTUAL_PINS - 1))
+                    MAX_VIRTUAL_PINS - 1))
 
     def VIRTUAL_READ(blynk, pin):
         class Decorator:
@@ -363,7 +470,7 @@ class Blynk:
         self.state = CONNECTING
         if self._ssl:
             import ssl
-            print('SSL: Connecting to %s:%d' % (
+            self.logger.info('SSL: Connecting to %s:%d' % (
                 self._server, self._port))
             ss = socket.socket(socket.AF_INET,
                                socket.SOCK_STREAM,
@@ -372,108 +479,8 @@ class Blynk:
                                         cert_reqs=ssl.CERT_REQUIRED,
                                         ca_certs='/flash/cert/ca.pem')
         else:
-            print('TCP: Connecting to %s:%d' % (
+            self.logger.info('TCP: Connecting to %s:%d' % (
                 self._server, self._port))
             self.conn = socket.socket()
         self.conn.connect(
             socket.getaddrinfo(self._server, self._port)[0][4])
-
-    def _block_until_connected_to_blynk(self):
-        while self.state != AUTHENTICATED:
-            self._run_task()
-            if self._do_connect:
-                try:
-                    self._connect_via_ssl_or_tcp()
-                except:
-                    self._close('connection with the Blynk servers failed')
-                    continue
-
-                self.state = AUTHENTICATING
-                hdr = self.hdr.pack(MSG_Login, self._new_msg_id(),
-                                    len(self._token))
-                self.logger.info('Blynk connection successful, '
-                                 'authenticating...')
-                self._send(hdr + self._token, True)
-                data = self._receive(HDR_LEN, timeout=MAX_SOCK_TIMEOUT)
-                if not data:
-                    self._close('Blynk authentication timed out')
-                    continue
-
-                msg_type, msg_id, status = self.hdr.unpack(data)
-                if status != Response_OK or msg_id == 0:
-                    self._close('Blynk authentication failed')
-                    continue
-
-                self.state = AUTHENTICATED
-                self._send(
-                    self._format_msg(MSG_Blynk_Internal, 'ver', '0.0.1+py',
-                                     'h-beat', HEARTBEAT_PERIOD, 'dev',
-                                     sys.platform))
-                self.logger.info('Access granted, happy Blynking!')
-                self._hb_time = int(time.time())
-                if self._on_connect:
-                    self._on_connect()
-            else:
-                self._start_time = sleep_from_until(self._start_time,
-                                                    TASK_PERIOD_RES)
-
-    def _communicate_with_blynk_and_run_task(self):
-        while self._do_connect:
-            data = None
-            try:
-                data = self._receive(HDR_LEN, NON_BLK_SOCK)
-            except:
-                pass
-            if data:
-                msg_type, msg_id, msg_len = struct.unpack(HDR_FMT, data)
-                if msg_id == 0:
-                    self._close('invalid msg id %d' % msg_id)
-                    break
-                if msg_type == MSG_Response:
-                    if msg_id == self._last_hb_id:
-                        self._last_hb_id = 0
-                    else:
-                        self.logger.debug('last_hb_id ({}) != msg_id ({}), '
-                                          'but msg_type == '
-                                          'MSG_Response'.format(
-                            self._last_hb_id, msg_id
-                        ))
-                elif msg_type == MSG_Ping:
-                    # Send Pong
-                    self._send(
-                        self.hdr.pack(MSG_Response, msg_id,
-                                      Response_OK), True)
-                elif msg_type == MSG_Hardware or msg_type == MSG_Bridge:
-                    data = self._receive(msg_len, MIN_SOCK_TO)
-                    if data:
-                        self._handle_hw(data)
-                else:
-                    self._close('unknown message type %d' % msg_type)
-                    break
-            else:
-                self._start_time = sleep_from_until(self._start_time,
-                                                    IDLE_TIME_MS)
-            if not self._server_alive():
-                self._close('Blynk server is offline')
-                break
-            self._run_task()
-
-    def run(self):
-        self._start_time = time.ticks_ms()
-        self._task_millis = self._start_time
-        self._hw_pins = {}
-        self._rx_data = b''
-        self._msg_id = 1
-        self._timeout = None
-        self._tx_count = 0
-        self._m_time = 0
-        self.state = DISCONNECTED
-
-        while True:
-            self._block_until_connected_to_blynk()
-
-            self._communicate_with_blynk_and_run_task()
-
-            if not self._do_connect:
-                self._close()
-                print('Blynk disconnection requested by the user')

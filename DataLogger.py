@@ -12,11 +12,10 @@ class DataLogger:
     _boilerTempSensors: List[TemperatureSensor]
     _steamTempSensors: List[TemperatureSensor]
 
-    def __init__(self, configs: Configurator, boilerTemp: float,
-                 steamTemp: float, stopEvent: Event,
+    def __init__(self, configs: Configurator, stopEvent: Event,
                  error_in_method_event: Event):
-        self.boilerTemp = boilerTemp
-        self.steamTemp = steamTemp
+        self.boilerTemp = 21
+        self.steamTemp = 21
         self._boilerTempSensors = []
         self._steamTempSensors = []
         self.configs = configs

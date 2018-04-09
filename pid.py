@@ -17,7 +17,7 @@ class PID:
         self.last_error = 0
         self.integral_value = 0
         self.derivative_value = 0
-        self.windup_guard = 20
+        self.windup_guard = 400
 
         self.proportional_term = 0
         self.integral_term = 0
@@ -27,12 +27,12 @@ class PID:
 
         self.output_min = 0
         self.output_max = 100
-        self.sample_time = 100  # ms between measurements
+        self.sample_time = 1  # s between measurements
         self.agressive_gap = 15  # °C
 
         self.setTunings(self.kp, self.ki, self.kd)
 
-        self.last_time = time.time() - self.sample_time
+        self.last_time = None
         self.elapsed_time = self.sample_time
 
     def setTunings(self, kp, ki, kd):
@@ -86,8 +86,12 @@ class PID:
             if time.time() - self.last_time < self.sample_time:
                 # do nothing
                 return None
+        else:
+            self.last_time = time.time()
+            return None
 
         self.elapsed_time = time.time() - self.last_time
+        self.last_time = time.time()
 
         self._calculate_error()
         self._calculate_integral()
