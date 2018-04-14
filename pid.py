@@ -1,3 +1,4 @@
+import logging
 import time
 
 
@@ -10,14 +11,14 @@ class PID:
         self.kp = kp
         self.ki = ki
         self.kd = kd
-        self.bias = 0
+        self.bias = 7
         self.forward = forward
 
         self.error = 0
         self.last_error = 0
         self.integral_value = 0
         self.derivative_value = 0
-        self.windup_guard = 400
+        self.windup_guard = 200
 
         self.proportional_term = 0
         self.integral_term = 0
@@ -35,6 +36,8 @@ class PID:
         self.last_time = None
         self.elapsed_time = self.sample_time
 
+        self.logger = logging.getLogger('__main__.' + __name__)
+
     def setTunings(self, kp, ki, kd):
         if kp < 0 or ki < 0 or kd < 0:
             return
@@ -47,37 +50,6 @@ class PID:
             self.kp *= -1
             self.ki *= -1
             self.kd *= -1
-
-    def __old_compute(self, input_value):
-        if self.last_time is not None:
-            if time.time() - self.last_time < self.sample_time:
-                # do nothing
-                return None
-
-        self.actual_value = input_value
-        current_time = time.time()
-        error = self.desired_value - input_value
-        delta_time = current_time - self.last_time
-        delta_error = error - self.last_error
-
-        p_value = self.kp * error
-
-        self.integral_value += error * delta_time
-        self.integral_value = min(self.integral_value, self.windup_guard)
-        self.integral_value = max(self.integral_value, -self.windup_guard)
-
-        self.derivative_value = delta_error / delta_time
-
-        # Compute PID Output
-        output = p_value + self.ki * self.integral_value + self.kd * \
-                 self.derivative_value
-        output = min(output, self.output_max)
-        output = max(output, self.output_min)
-
-        self.last_measure = self.input
-        self.last_time = current_time
-
-        return output
 
     def compute(self, actual_value):
         self.actual_value = actual_value
@@ -110,7 +82,8 @@ class PID:
 
         # check boundaries
         self.integral_value = min(self.integral_value, self.windup_guard)
-        self.integral_value = max(self.integral_value, -self.windup_guard)
+        self.integral_value = max(self.integral_value, 0)
+        self.logger.debug('Integral value: {}'.format(self.integral_value))
 
         self.integral_term = self.ki * self.integral_value
 
@@ -125,6 +98,9 @@ class PID:
                   self.derivative_term +
                   self.bias
                   )
+        self.logger.debug('prop: \t{}\noutput: \t{}'.format(
+            self.proportional_term, output
+            ))
 
         # check boundaries
         output = min(output, self.output_max)

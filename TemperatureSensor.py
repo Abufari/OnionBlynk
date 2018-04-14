@@ -46,10 +46,9 @@ class SensorInitiator:
 class TemperatureSensor:
     sensor: SensorInitiator
 
-    def __init__(self, sensorAddress: str = None,
-                 configs: Configurator = None):
+    def __init__(self, sensorAddress: str = None):
         self.logger = logging.getLogger(__name__)
-        self.configs = configs
+        self.configs = Configurator.instance()
         self.oneWireStatus = oneWire.setupOneWire(
             self.configs.tempSensorPin)
 
@@ -63,22 +62,23 @@ class TemperatureSensor:
             self.sensorAddress = oneWire.scanOneAddress()
             self.logger.info('Found logger with address: {}'.format(
                 self.sensorAddress
-            ))
+                ))
 
         if not self.sensorAddress:
             return False
         self.sensor = SensorInitiator('oneWire', {
             'address': self.sensorAddress,
-            'gpio': self.configs.tempSensorPin
-        })
+            'gpio':    self.configs.tempSensorPin
+            })
 
         if not self.sensor.ready:
-            self.logger.warning('Sensor was not set up correctly. Please make '
-                                'sure that your sensor is firmly connected '
-                                'to the GPIO {} and try again.'.format(
-                self.configs.tempSensorPin
-            )
-            )
+            self.logger.warning(
+                'Sensor was not set up correctly. Please make '
+                'sure that your sensor is firmly connected '
+                'to the GPIO {} and try again.'.format(
+                    self.configs.tempSensorPin
+                    )
+                )
         return True
 
     def readTemperature(self):

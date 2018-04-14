@@ -5,18 +5,24 @@ from Configurator import Configurator
 
 
 class PinHandler(object):
-    def __init__(self, configs: Configurator):
-        self.configs = configs
-        configs.functionList.append(self.update_configs)
+    def __init__(self):
+        self.configs = Configurator.instance()
+        self.configs.functionList.append(self.update_configs)
         self.heatingElement = self.configs.heaterElementPin
         os.system('fast-gpio set-output {}'.format(
             self.heatingElement
             ))
 
+        self.last_value = 0
+
         self.logger = logging.getLogger('__main__.' + __name__)
 
     def setHeater(self, value):
         value = round(value)
+        if value == self.last_value:
+            return
+        self.last_value = value
+
         if value == 0:
             os.system('fast-gpio set {gpio} {value:d}'.format(
                 gpio=self.heatingElement, value=value

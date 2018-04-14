@@ -241,7 +241,6 @@ class Blynk:
                     break
                 if msg_type == MSG_Response:
                     if msg_id == self._last_hb_id:
-                        self.logger.debug('setting last_hb_id to 0')
                         self._last_hb_id = 0
                     else:
                         self.logger.debug(
@@ -375,7 +374,6 @@ class Blynk:
                 self._last_hb_id = self._new_msg_id()
                 self._send(self.hdr.pack(MSG_Ping, self._last_hb_id, 0),
                            send_anyway=True)
-                self.logger.debug('Sending ping in _server_alive')
         return True
 
     def _run_task(self):

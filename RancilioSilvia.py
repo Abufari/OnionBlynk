@@ -3,20 +3,20 @@ import time
 from threading import Event
 
 from Configurator import Configurator
-from DataLogger import DataLogger
 from PinHandler import PinHandler
 from pid import PID
 
 
 class Heater(object):
-    def __init__(self, configs):
+    def __init__(self):
         self.output = 0
         self.cycleStartTime = time.time()
         self.cycleMilliseconds = 1000
 
         self.onTime = 0
 
-        self.pinHandler = PinHandler(configs)
+        self.configs = Configurator.instance()
+        self.pinHandler = PinHandler()
 
     def heaterHandler(self):
         self.pinHandler.setHeater(self.output)
@@ -27,24 +27,34 @@ class Heater(object):
 
 
 class RancilioSilvia:
-    def __init__(self, configs: Configurator, dataLogger: DataLogger,
-                 stopEvent: Event = None):
+    configs: Configurator
+
+    def __init__(self, stopEvent: Event = None):
         self.input_value = 0
-        self.configs = configs
+        self.configs = Configurator.instance()
         self.configs.functionList.append(self.update_configs)
-        self.heater = Heater(configs)
+        self.heater = Heater()
         self.pid = PID()
         self.update_configs()
         self.isPoweredOn = False
         self.powerMode = self.configs.energy_mode.eco
-        self.dataLogger = dataLogger
+        self.dataLogger = self.configs.dataLogger
         self._stopEvent = stopEvent
         self.logger = logging.getLogger('__main__.' + __name__)
 
     def update(self):
-        if self.isPoweredOn:
+        if self.isPoweredOn and self.powerMode != \
+                self.configs.energy_mode.off:
             temperature = self.dataLogger.boilerTemp
             output = self.pid.compute(temperature)
+
+            setpoint = self.configs.pid_configs[
+                self.configs.RancilioPowerMode]['setpoint']
+            if abs(temperature - setpoint) < 1:
+                self.configs.RancilioHeatedUp = True
+            else:
+                self.configs.RancilioHeatedUp = False
+
             if output is None:
                 return
         else:

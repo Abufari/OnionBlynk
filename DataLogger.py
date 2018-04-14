@@ -12,25 +12,22 @@ class DataLogger:
     _boilerTempSensors: List[TemperatureSensor]
     _steamTempSensors: List[TemperatureSensor]
 
-    def __init__(self, configs: Configurator, stopEvent: Event,
-                 error_in_method_event: Event):
+    def __init__(self, stopEvent: Event, error_in_method_event: Event):
         self.boilerTemp = 21
         self.steamTemp = 21
         self._boilerTempSensors = []
         self._steamTempSensors = []
-        self.configs = configs
+        self.configs = Configurator.instance()
         self.configs.functionList.append(self.update_configs)
-        self._smoothingFactor = configs.smoothingFactor
+        self._smoothingFactor = self.configs.smoothingFactor
         self._stopEvent = stopEvent
         self._error_in_method_event = error_in_method_event
 
         self.logger = logging.getLogger('__main__.' + __name__)
 
-    def newTemperatureSensor(self, sensor_type='boiler',
+    def addTemperatureSensor(self, sensor_type='boiler',
                              sensoridentifier='28-0000092c44f8'):
-        temperatureSensor = TemperatureSensor(
-            sensorAddress=sensoridentifier,
-            configs=self.configs)
+        temperatureSensor = TemperatureSensor(sensorAddress=sensoridentifier)
         temperatureSensor.setupSensor()
         if sensor_type == 'boiler':
             self._boilerTempSensors.append(temperatureSensor)

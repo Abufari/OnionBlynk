@@ -12,8 +12,8 @@ setupDelay = 3
 oneWireDir = "/sys/devices/w1_bus_master1"
 paths = {
     "slaveCount": oneWireDir + "/w1_master_slave_count",
-    "slaves": oneWireDir + "/w1_master_slaves"
-}
+    "slaves":     oneWireDir + "/w1_master_slaves"
+    }
 
 
 # a bunch of functions to be used by the OneWire class
@@ -21,7 +21,7 @@ paths = {
 # it's also called a "module", but it's actually software for the
 # Omega's firmware!
 def insertKernelModule(gpio):
-    argBus = "bus0=0," + gpio + ",0"
+    argBus = "bus0=0," + str(gpio) + ",0"
     subprocess.call(["insmod", "w1-gpio-custom", argBus])
 
 
