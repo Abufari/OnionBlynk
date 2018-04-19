@@ -1,7 +1,10 @@
 import logging
 import time
 
+from Singleton import Singleton
 
+
+@Singleton
 class PID:
     def __init__(self, setpoint: float = 90,
                  input_value: float = 20, kp: float = 1,
@@ -11,14 +14,14 @@ class PID:
         self.kp = kp
         self.ki = ki
         self.kd = kd
-        self.bias = 7
+        self.bias = 0
         self.forward = forward
 
         self.error = 0
         self.last_error = 0
         self.integral_value = 0
         self.derivative_value = 0
-        self.windup_guard = 200
+        self.windup_guard = 10
 
         self.proportional_term = 0
         self.integral_term = 0
@@ -78,18 +81,22 @@ class PID:
         self.proportional_term = self.kp * self.error
 
     def _calculate_integral(self):
+        if not 0 <= self.error < 1:
+            self.integral_term = 0
+            self.integral_value = 0
+            return
+
         self.integral_value += self.error * self.elapsed_time
 
-        # check boundaries
-        self.integral_value = min(self.integral_value, self.windup_guard)
-        self.integral_value = max(self.integral_value, 0)
-        self.logger.debug('Integral value: {}'.format(self.integral_value))
-
         self.integral_term = self.ki * self.integral_value
+        # windup guard
+        self.integral_term = min(self.integral_term, self.windup_guard)
+        self.integral_term = max(self.integral_term, 0)
 
     def _calculate_derivative(self):
         self.derivative_value = (self.error - self.last_error
                                  ) / self.elapsed_time
+        self.last_error = self.error
         self.derivative_term = self.kd * self.derivative_value
 
     def _calculate_new_output(self):
@@ -98,9 +105,6 @@ class PID:
                   self.derivative_term +
                   self.bias
                   )
-        self.logger.debug('prop: \t{}\noutput: \t{}'.format(
-            self.proportional_term, output
-            ))
 
         # check boundaries
         output = min(output, self.output_max)

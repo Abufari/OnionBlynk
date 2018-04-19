@@ -2,8 +2,10 @@ import logging
 import os
 
 from Configurator import Configurator
+from Singleton import Singleton
 
 
+@Singleton
 class PinHandler(object):
     def __init__(self):
         self.configs = Configurator.instance()

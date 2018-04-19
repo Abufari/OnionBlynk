@@ -6,8 +6,8 @@ from Singleton import Singleton
 @Singleton
 class Configurator:
     def __init__(self):
-        self.energy_modi = namedtuple('energy_mode', 'off on eco steam')
-        self.energy_mode = self.energy_modi(off=0, on=1, eco=2, steam=3)
+        self.energy_modi = namedtuple('energy_mode', 'off eco on steam')
+        self.energy_mode = self.energy_modi(off=0, eco=1, on=2, steam=3)
 
         self.functionList = []
         self.current_mode = self.energy_mode.on
@@ -26,30 +26,30 @@ class Configurator:
                 'kp':       0,
                 'ki':       0.0,
                 'kd':       0,
-                'setpoint': 0,
+                'setpoint': 20.0,
                 },
             self.energy_mode.eco:   {
-                'kp':       5,
+                'kp':       7,
                 'ki':       0.0,
-                'kd':       0,
-                'setpoint': 50,
+                'kd':       80,  # 30,
+                'setpoint': 50.0,
                 },
             self.energy_mode.on:    {
-                'kp':       20,
-                'ki':       0.10,
-                'kd':       10,
-                'setpoint': 94,
+                'kp':       8,
+                'ki':       0.25,
+                'kd':       90,
+                'setpoint': 98.0,
                 },
             self.energy_mode.steam: {
-                'kp':       10,
+                'kp':       8,
                 'ki':       0,
-                'kd':       0,
-                'setpoint': 115,
+                'kd':       50,
+                'setpoint': 120.0,
                 }
             }
 
         # data acquisition
-        self.smoothingFactor = 1
+        self.smoothingFactor = 2
 
         self.boilerTempSensor1 = '28-0000092c44f8'
         self.boilerTempSensor2 = '28-0000092d7d9f'

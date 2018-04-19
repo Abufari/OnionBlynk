@@ -8,6 +8,8 @@ from pid import PID
 
 
 class Heater(object):
+    pinHandler: PinHandler
+
     def __init__(self):
         self.output = 0
         self.cycleStartTime = time.time()
@@ -16,14 +18,17 @@ class Heater(object):
         self.onTime = 0
 
         self.configs = Configurator.instance()
-        self.pinHandler = PinHandler()
-
-    def heaterHandler(self):
-        self.pinHandler.setHeater(self.output)
+        self.pinHandler = PinHandler.instance()
 
     def update(self, output):
         self.output = min(output, 100)
         self.heaterHandler()
+
+    def heaterHandler(self):
+        if self.configs.RancilioPoweredOn:
+            self.pinHandler.setHeater(self.output)
+        else:
+            self.pinHandler.setHeater(0)
 
 
 class RancilioSilvia:
@@ -34,7 +39,7 @@ class RancilioSilvia:
         self.configs = Configurator.instance()
         self.configs.functionList.append(self.update_configs)
         self.heater = Heater()
-        self.pid = PID()
+        self.pid = PID.instance()
         self.update_configs()
         self.isPoweredOn = False
         self.powerMode = self.configs.energy_mode.eco
@@ -43,28 +48,27 @@ class RancilioSilvia:
         self.logger = logging.getLogger('__main__.' + __name__)
 
     def update(self):
-        if self.isPoweredOn and self.powerMode != \
-                self.configs.energy_mode.off:
-            temperature = self.dataLogger.boilerTemp
-            output = self.pid.compute(temperature)
+        temperature = self.dataLogger.boilerTemp
+        output = self.pid.compute(temperature)
 
-            setpoint = self.configs.pid_configs[
-                self.configs.RancilioPowerMode]['setpoint']
-            if abs(temperature - setpoint) < 1:
-                self.configs.RancilioHeatedUp = True
-            else:
-                self.configs.RancilioHeatedUp = False
-
-            if output is None:
-                return
+        setpoint = self.configs.pid_configs[
+            self.configs.RancilioPowerMode]['setpoint']
+        if abs(temperature - setpoint) < 1:
+            self.configs.RancilioHeatedUp = True
         else:
-            output = 0
-        self.configs.heater_output = output
+            self.configs.RancilioHeatedUp = False
+
+        if output is None:
+            return
+
+        if self.configs.RancilioPoweredOn:
+            self.configs.heater_output = output
+        else:
+            self.configs.heater_output = 0
         self.setHeaterOutput(output)
 
     def setHeaterOutput(self, output: float):
-        self.heater.output = output
-        self.heater.heaterHandler()
+        self.heater.update(output)
 
     def update_configs(self):
         # Power settings

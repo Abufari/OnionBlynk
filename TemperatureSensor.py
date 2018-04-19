@@ -2,6 +2,7 @@ import logging
 
 import oneWire
 from Configurator import Configurator
+from RancilioError import RancilioError
 
 
 class SensorInitiator:
@@ -52,6 +53,8 @@ class TemperatureSensor:
         self.oneWireStatus = oneWire.setupOneWire(
             self.configs.tempSensorPin)
 
+        self.lastTemperature = None
+
         self.sensorAddress = sensorAddress
         self.sensor = None
 
@@ -79,7 +82,17 @@ class TemperatureSensor:
                     self.configs.tempSensorPin
                     )
                 )
+        self.lastTemperature = self.sensor.readValue()
         return True
 
     def readTemperature(self):
-        return self.sensor.readValue()
+        temperature = self.sensor.readValue()
+        if abs(temperature - self.lastTemperature) > 5:
+            rancilioError = RancilioError.instance()
+            rancilioError.tempSensorFail = (True, str(self.sensorAddress))
+            self.logger.error(
+                'Temperature difference between readings is {}°C'.format(
+                    temperature - self.lastTemperature
+                    ))
+        self.lastTemperature = temperature
+        return temperature
