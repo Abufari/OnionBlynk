@@ -140,6 +140,14 @@ def pid_derivative_handler():
     blynk.virtual_write(8, pid.derivative_term)
 
 
+@blynk.VIRTUAL_WRITE(10)
+def smoothing_factor_handler(value):
+    value = float(value)
+    configs: Configurator = Configurator.instance()
+    configs.smoothingFactor = value
+    configs.update()
+
+
 def blynk_check_live_connection():
     return blynk.state
 

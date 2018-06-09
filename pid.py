@@ -21,7 +21,8 @@ class PID:
         self.last_error = 0
         self.integral_value = 0
         self.derivative_value = 0
-        self.windup_guard = 10
+        self.windup_guard = 15
+        self.windup_difference = 5
 
         self.proportional_term = 0
         self.integral_term = 0
@@ -81,21 +82,24 @@ class PID:
         self.proportional_term = self.kp * self.error
 
     def _calculate_integral(self):
-        if not 0 <= self.error < 1:
-            self.integral_term = 0
+        if not abs(self.error) < self.windup_difference:
             self.integral_value = 0
+            self.integral_term = 0
             return
 
         self.integral_value += self.error * self.elapsed_time
+        self.integral_value = min(self.integral_value, 10/self.ki)
+        self.integral_value = max(self.integral_value, 0)
 
         self.integral_term = self.ki * self.integral_value
         # windup guard
-        self.integral_term = min(self.integral_term, self.windup_guard)
-        self.integral_term = max(self.integral_term, 0)
+        #self.integral_term = min(self.integral_term, self.windup_guard)
+        #self.integral_term = max(self.integral_term, 0)
 
     def _calculate_derivative(self):
-        self.derivative_value = (self.error - self.last_error
-                                 ) / self.elapsed_time
+        self.derivative_value += ((self.error - self.last_error)
+                                  / self.elapsed_time -
+                                  self.derivative_value) / 2
         self.last_error = self.error
         self.derivative_term = self.kd * self.derivative_value
 

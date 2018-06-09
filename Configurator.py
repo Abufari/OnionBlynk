@@ -30,20 +30,20 @@ class Configurator:
                 },
             self.energy_mode.eco:   {
                 'kp':       7,
-                'ki':       0.0,
+                'ki':       0.1,
                 'kd':       80,  # 30,
                 'setpoint': 50.0,
                 },
             self.energy_mode.on:    {
-                'kp':       8,
-                'ki':       0.25,
-                'kd':       90,
-                'setpoint': 98.0,
+                'kp':       6.6,
+                'ki':       0.1,
+                'kd':       99,
+                'setpoint': 95,
                 },
             self.energy_mode.steam: {
-                'kp':       8,
-                'ki':       0,
-                'kd':       50,
+                'kp':       8.5,
+                'ki':       0.1,
+                'kd':       100,
                 'setpoint': 120.0,
                 }
             }

@@ -87,7 +87,11 @@ class TemperatureSensor:
 
     def readTemperature(self):
         temperature = self.sensor.readValue()
-        if abs(temperature - self.lastTemperature) > 5:
+        if temperature is None:
+            rancilioError = RancilioError.instance()
+            rancilioError.tempSensorFail = (True, str(self.sensorAddress))
+            self.logger.error("Couldn't read temperature at all")
+        elif abs(temperature - self.lastTemperature) > 5:
             rancilioError = RancilioError.instance()
             rancilioError.tempSensorFail = (True, str(self.sensorAddress))
             self.logger.error(

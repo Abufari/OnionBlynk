@@ -134,6 +134,7 @@ class Blynk:
 
     def __init__(self, token, server='blynk-cloud.com', port=None,
                  connect=True, ssl=False):
+        self.logger = logging.getLogger('__main__.' + __name__)
         self._tx_count = 0
         self._last_hb_id = 0
         self._hb_time = 0
@@ -166,7 +167,6 @@ class Blynk:
         self._last_server_alive_checked = 0
 
         self.hdr = struct.Struct(HDR_FMT)
-        self.logger = logging.getLogger('__main__.' + __name__)
 
     def run(self):
         self._start_time = time.ticks_ms()
